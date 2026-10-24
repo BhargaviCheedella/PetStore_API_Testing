@@ -32,12 +32,7 @@ jobs:
         shell: bash
         run: |
           set -o pipefail
-          newman run "postman/collections/Petstore API Tests.postman_collection.json"` 
-          -e "postman/environments/Petstore Env.postman_environment.json" \ 
-          --reporters cli,htmlextra,json,junit \ 
-          --reporter-htmlextra-export reports/api-test-report.html \ 
-          --reporter-json-export reports/api-test-report.json \ 
-          | tee reports/api-test-report.txt"
+          newman run "postman/collections/Petstore API Tests.postman_collection.json"` -e "postman/environments/Petstore Env.postman_environment.json"` -r "cli,htmlextra,json,jnit"` --reporter-htmlextra-export "reports/api-test-report.html"` --reporter-json-export "reports/api-test-report.json"
 
       - name: Upload reports
         if: always()
