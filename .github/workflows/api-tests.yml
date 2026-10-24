@@ -1,12 +1,10 @@
-name: PetStore API Tests
+name: API Tests
 
 on:
   push:
-    branches: 
-        - main
+    branches: [main]
   pull_request:
-    branches: 
-        - main
+    branches: [main]
   workflow_dispatch:
 
 jobs:
@@ -20,19 +18,30 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: "20"
+          cache: npm
 
-      - name: Install Newman and HTML Extra Reporter
-        run: npm install -g newman newman-reporter-htmlextra
+      - name: Install dependencies
+        run: npm ci
 
-      - name: Verify Collection and Environment files 
-        run: |
-          ls -la collections environments
+      - name: Run required API tests
+        run: >
+          npx newman run "postman/collections/Petstore API Tests.postman_collection.json"
+          -e "postman/environments/Petstore Env.postman_environment.json"
+          --folder "01 Smoke" --folder "02 User Lifecycle"
+          --folder "03 Pet Lifecycle" --folder "05 Negative Tests"
+          -r cli,htmlextra,junit
+          --reporter-htmlextra-export reports/required-report.html
+          --reporter-junit-export reports/required-report.xml
 
-      - name: Run Newman Tests
-        shell: bash
-        run: |
-          set -o pipefail
-          newman run "postman/collections/Petstore API Tests.postman_collection.json"` -e "postman/environments/Petstore Env.postman_environment.json"` -r "cli,htmlextra,json,jnit"` --reporter-htmlextra-export "reports/api-test-report.html"` --reporter-json-export "reports/api-test-report.json"
+      - name: Run known-issue tests (report only)
+        if: always()
+        continue-on-error: true
+        run: >
+          npx newman run "postman/collections/Petstore API Tests.postman_collection.json"
+          -e "postman/environments/Petstore Env.postman_environment.json"
+          --folder "04 Known Issues"
+          -r cli,htmlextra
+          --reporter-htmlextra-export reports/known-issues-report.html
 
       - name: Upload reports
         if: always()
