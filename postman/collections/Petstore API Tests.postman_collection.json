@@ -1,0 +1,940 @@
+{
+  "info": {
+    "_postman_id": "6a5bebf6-2942-4305-bf34-c0af26aa396c",
+    "name": "Petstore API Tests",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "42515830"
+  },
+  "item": [
+    {
+      "name": "05 Negative Tests",
+      "item": [
+        {
+          "name": "Non-Existent User",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 404 Not Found\", function () {\r\n    pm.response.to.have.status(404);\r\n});\r\n\r\npm.test(\"Error body explains the problem\", function () {\r\n    const body = pm.response.json();\r\n    pm.expect(body).to.have.property(\"type\", \"error\");\r\n    pm.expect(body).to.have.property(\"message\", \"User not found\");\r\n});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/user/no_such_user_{{$timestamp}}",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "user",
+                "no_such_user_{{$timestamp}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Create User-Malformed JSON",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 400 Bad Request\", function () {\r\n    pm.response.to.have.status(400);\r\n});\r\n\r\npm.test(\"Error body reports bad input\", function () {\r\n    const body = pm.response.json();\r\n    pm.expect(body).to.have.property(\"code\", 400);\r\n    pm.expect(body).to.have.property(\"message\", \"bad input\");\r\n});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n    \"username\": \"bad\",",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/user",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "user"
+              ]
+            }
+          },
+          "response": []
+        }
+      ],
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Response is received in under 3000 ms\", function () {\r\n    pm.expect(pm.response.responseTime).to.be.below(3000);\r\n});\r\n\r\npm.test(\"Server did not crash (no 5xx)\", function () {\r\n    pm.expect(pm.response.code).to.be.below(500);\r\n});\r\n\r\nconsole.log(\"STATUS:\", pm.response.code, \"BODY:\", pm.response.text());"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "01 Smoke",
+      "item": [
+        {
+          "name": "Smoke - Store Inventory",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {\r\n    pm.response.to.have.status(200);\r\n});\r\n\r\npm.test(\"Response time is less than 3000ms\", function () {\r\n    pm.expect(pm.response.responseTime).to.be.below(3000);\r\n});\r\n\r\npm.test(\"Content-Type is JSON\", function () {\r\n    pm.response.to.have.header(\"Content-Type\");\r\n    pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\");\r\n});\r\npm.test(\"Body is a JSON object of numeric counts\", function() {\r\n    const body = pm.response.json();\r\n    pm.expect(body).to.be.an('object');\r\n    Object.values(body).forEach(v => pm.expect(v).to.be.a(\"number\"));\r\n})"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/store/inventory",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "store",
+                "inventory"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "02 User Lifecycle",
+      "item": [
+        {
+          "name": "Create User",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const ts = Date.now();\r\npm.collectionVariables.set(\"username\", \"user_\" + ts);\r\npm.collectionVariables.set(\"userId\", ts % 1000000);\r\npm.collectionVariables.set(\"firstName\", \"Test\");\r\npm.collectionVariables.set(\"lastName\", \"API Test\");"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {\r\n    pm.response.to.have.status(200);\r\n});\r\n\r\npm.test(\"Content-Type is JSON\", function() {\r\n    pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\");\r\n});\r\n\r\npm.test(\"Response body has expected structure\", function(){\r\n    const body = pm.response.json();\r\n    pm.expect(body).to.have.property(\"code\", 200);\r\n    pm.expect(body).to.have.property(\"type\", \"unknown\");\r\n    pm.expect(body).to.have.property(\"message\");\r\n});\r\n\r\npm.test(\"Message Echoes submitted user id\", function() {\r\n    const body = pm.response.json();\r\n    pm.expect(body.message).to.eql(String(pm.collectionVariables.get(\"userId\")));\r\n});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"id\": {{userId}},\r\n  \"username\": \"{{username}}\",\r\n  \"firstName\": \"{{firstName}}\",\r\n  \"lastName\": \"{{lastName}}\",\r\n  \"email\": \"{{username}}@example.com\",\r\n  \"password\": \"tester@123\",\r\n  \"phone\": \"999999999\",\r\n  \"userStatus\": 1\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/user",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "user"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Created User",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {\r\n    pm.response.to.have.status(200);\r\n});\r\n\r\npm.test(\"Returned user matches what was sent\", function () {\r\n    const body = pm.response.json();\r\n    const username = pm.collectionVariables.get(\"username\");\r\n    pm.expect(body.username).to.eql(username);\r\n    pm.expect(body.id).to.eql(Number(pm.collectionVariables.get(\"userId\")));\r\n    pm.expect(body.firstName).to.eql(pm.collectionVariables.get(\"firstName\"));\r\n    pm.expect(body.lastName).to.eql(pm.collectionVariables.get(\"lastName\"));\r\n    pm.expect(body.email).to.eql(username + \"@example.com\");\r\n});\r\n"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/user/{{username}}",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "user",
+                "{{username}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update User",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.set(\"updatedFirstName\", \"UpdatedTest\");"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {\r\n    pm.response.to.have.status(200);\r\n});\r\n\r\npm.test(\"Response body has expected structure\", function () {\r\n    const body = pm.response.json();\r\n    pm.expect(body).to.have.property(\"code\", 200);\r\n    pm.expect(body).to.have.property(\"message\");\r\n});\r\n\r\npm.test(\"Message echoes the user id\", function () {\r\n    pm.expect(pm.response.json().message).to.eql(String(pm.collectionVariables.get(\"userId\")));\r\n});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"id\": {{userId}},\r\n  \"username\": \"{{username}}\",\r\n  \"firstName\": \"{{updatedFirstName}}\",\r\n  \"lastName\": \"{{lastName}}\",\r\n  \"email\": \"{{username}}@example.com\",\r\n  \"password\": \"tester@123\",\r\n  \"phone\": \"999999999\",\r\n  \"userStatus\": 1\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/user/{{username}}",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "user",
+                "{{username}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Updated User",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {\r\n    pm.response.to.have.status(200);\r\n});\r\n\r\npm.test(\"First name was updated\", function () {\r\n    const body = pm.response.json();\r\n    pm.expect(body.firstName).to.eql(pm.collectionVariables.get(\"updatedFirstName\"));\r\n});\r\n\r\npm.test(\"Unchanged fields are preserved\", function () {\r\n    const body = pm.response.json();\r\n    pm.expect(body.username).to.eql(pm.collectionVariables.get(\"username\"));\r\n    pm.expect(body.lastName).to.eql(pm.collectionVariables.get(\"lastName\"));\r\n    pm.expect(body.id).to.eql(Number(pm.collectionVariables.get(\"userId\")));\r\n});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/user/{{username}}",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "user",
+                "{{username}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Patch User (Unsupported)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"PATCH returns 405 Method Not Allowed\", function () {\r\n    pm.response.to.have.status(405);\r\n});\r\n\r\npm.test(\"Error body is JSON with code 405\", function () {\r\n    const body = pm.response.json();\r\n    pm.expect(body).to.have.property(\"code\", 405);\r\n});\r\n\r\npm.test(\"PATCH did not return a success status\", function () {\r\n    pm.expect(pm.response.code).to.not.be.within(200, 299);\r\n});\r\n"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"firstName\": \"PatchedName\"\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/user/{{username}}",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "user",
+                "{{username}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Updated User",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {\r\n    pm.response.to.have.status(200);\r\n});\r\n\r\npm.test(\"Rejected PATCH did not change the data\", function () {\r\n    const body = pm.response.json();\r\n    pm.expect(body.firstName).to.eql(pm.collectionVariables.get(\"updatedFirstName\"));\r\n    pm.expect(body.firstName).to.not.eql(\"PatchedName\");\r\n});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/user/{{username}}",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "user",
+                "{{username}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete User",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {\r\n    pm.response.to.have.status(200);\r\n});\r\n\r\npm.test(\"Response body has expected structure\", function () {\r\n    const body = pm.response.json();\r\n    pm.expect(body).to.have.property(\"code\", 200);\r\n    pm.expect(body).to.have.property(\"message\");\r\n});\r\n\r\npm.test(\"Message echoes the deleted username\", function () {\r\n    pm.expect(pm.response.json().message).to.eql(pm.collectionVariables.get(\"username\"));\r\n});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/user/{{username}}",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "user",
+                "{{username}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Deleted User",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 404\", function () {\r\n    pm.response.to.have.status(404);\r\n});\r\n\r\npm.test(\"Error body describes the problem\", function () {\r\n    const body = pm.response.json();\r\n    pm.expect(body).to.have.property(\"code\");\r\n    pm.expect(body).to.have.property(\"message\");\r\n    pm.expect(body.message).to.be.a(\"string\");\r\n});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/user/{{username}}",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "user",
+                "{{username}}"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "03 Pet Lifecycle",
+      "item": [
+        {
+          "name": "Create Pet",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const ts = Date.now();\r\npm.collectionVariables.set(\"petId\", ts % 1000000);\r\npm.collectionVariables.set(\"petName\", \"Pet_\" + ts);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {\r\n    pm.response.to.have.status(200);\r\n});\r\n\r\npm.test(\"Returned pet matches what was sent\", function () {\r\n    const body = pm.response.json();\r\n    pm.expect(body.id).to.eql(Number(pm.collectionVariables.get(\"petId\")));\r\n    pm.expect(body.name).to.eql(pm.collectionVariables.get(\"petName\"));\r\n    pm.expect(body.status).to.eql(\"available\");\r\n});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"id\": {{petId}},\r\n  \"category\": { \"id\": 1, \"name\": \"Dogs\" },\r\n  \"name\": \"{{petName}}\",\r\n  \"photoUrls\": [\"https://example.com/dog.jpg\"],\r\n  \"tags\": [{ \"id\": 1, \"name\": \"friendly\" }],\r\n  \"status\": \"available\"\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/pet",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "pet"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Created Pet",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {\r\n    pm.response.to.have.status(200);\r\n});\r\n\r\npm.test(\"Stored pet matches what was sent\", function () {\r\n    const body = pm.response.json();\r\n    pm.expect(body.id).to.eql(Number(pm.collectionVariables.get(\"petId\")));\r\n    pm.expect(body.name).to.eql(pm.collectionVariables.get(\"petName\"));\r\n    pm.expect(body.status).to.eql(\"available\");\r\n    pm.expect(body.category.name).to.eql(\"Dogs\");\r\n    pm.expect(body.tags[0].name).to.eql(\"friendly\");\r\n    pm.expect(body.photoUrls).to.include(\"https://example.com/dog.jpg\");\r\n});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/pet/{{petId}}",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "pet",
+                "{{petId}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Updated Pet",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {\r\n    pm.response.to.have.status(200);\r\n});\r\n\r\npm.test(\"Returned pet has the new status\", function () {\r\n    const body = pm.response.json();\r\n    pm.expect(body.id).to.eql(Number(pm.collectionVariables.get(\"petId\")));\r\n    pm.expect(body.status).to.eql(\"sold\");\r\n});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"id\": {{petId}},\r\n  \"category\": { \"id\": 1, \"name\": \"Dogs\" },\r\n  \"name\": \"{{petName}}\",\r\n  \"photoUrls\": [\"https://example.com/dog.jpg\"],\r\n  \"tags\": [{ \"id\": 1, \"name\": \"friendly\" }],\r\n  \"status\": \"sold\"\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/pet",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "pet"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Updated Pet",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/pet/{{petId}}",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "pet",
+                "{{petId}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Find Pets By Status - Sold",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {\r\n    pm.response.to.have.status(200);\r\n});\r\n\r\npm.test(\"Every returned pet has status sold\", function () {\r\n    const body = pm.response.json();\r\n    pm.expect(body).to.be.an(\"array\");\r\n    body.forEach(p => pm.expect(p.status).to.eql(\"sold\"));\r\n});\r\n\r\npm.test(\"Updated pet appears in the sold list\", function () {\r\n    const id = Number(pm.collectionVariables.get(\"petId\"));\r\n    const found = pm.response.json().some(p => p.id === id);\r\n    pm.expect(found, \"pet \" + id + \" not in sold list\").to.be.true;\r\n});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/pet/findByStatus?status=sold",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "pet",
+                "findByStatus"
+              ],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "sold"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Pet",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {\r\n    pm.response.to.have.status(200);\r\n});\r\n\r\npm.test(\"Response confirms deletion of this pet\", function () {\r\n    const body = pm.response.json();\r\n    pm.expect(body).to.have.property(\"code\", 200);\r\n    pm.expect(body.message).to.eql(String(pm.collectionVariables.get(\"petId\")));\r\n});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/pet/{{petId}}",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "pet",
+                "{{petId}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Deleted Pet",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 404\", function () {\r\n    pm.response.to.have.status(404);\r\n});\r\n\r\npm.test(\"Error body says pet not found\", function () {\r\n    const body = pm.response.json();\r\n    pm.expect(body).to.have.property(\"type\", \"error\");\r\n    pm.expect(body).to.have.property(\"message\", \"Pet not found\");\r\n});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/pet/{{petId}}",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "pet",
+                "{{petId}}"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "04 Known Issues",
+      "item": [
+        {
+          "name": "Create User (for Known Issue)",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const ts = Date.now();\r\npm.collectionVariables.set(\"username\", \"user_\" + ts);\r\npm.collectionVariables.set(\"userId\", ts % 1000000);\r\npm.collectionVariables.set(\"firstName\", \"Test\");\r\npm.collectionVariables.set(\"lastName\", \"API Test\");"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Setup: user was created (status 200)\", function () {\r\n    pm.response.to.have.status(200);\r\n});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"id\": {{userId}},\r\n  \"username\": \"{{username}}\",\r\n  \"firstName\": \"{{firstName}}\",\r\n  \"lastName\": \"{{lastName}}\",\r\n  \"email\": \"{{username}}@example.com\",\r\n  \"password\": \"tester@123\",\r\n  \"phone\": \"999999999\",\r\n  \"userStatus\": 1\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/user",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "user"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get User (Known Issue)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"SECURITY: response should not expose the password\", function () {\r\n    const body = pm.response.json();\r\n    // Precondition: prove this is a user record before checking for a leak.\r\n    pm.expect(body, \"response is not a user record\").to.have.property(\"username\");\r\n    pm.expect(body).to.not.have.property(\"password\");\r\n});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/user/{{username}}",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "user",
+                "{{username}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Create User Empty Body",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"DEFECT: empty user body should be rejected with 4xx\", function () {\r\n    pm.expect(pm.response.code).to.be.within(400, 499);\r\n});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/user",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "user"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Login-Wrong Credentials",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"DEFECT: wrong credentials should not log in successfully\", function () {\r\n    pm.expect(pm.response.code).to.be.within(400, 499);\r\n});\r\n\r\npm.test(\"DEFECT: body should not report a logged-in session\", function () {\r\n    pm.expect(pm.response.json().message).to.not.include(\"logged in\");\r\n});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/user/login?username=nobody&password=wrong",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "user",
+                "login"
+              ],
+              "query": [
+                {
+                  "key": "username",
+                  "value": "nobody"
+                },
+                {
+                  "key": "password",
+                  "value": "wrong"
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "username",
+      "value": ""
+    },
+    {
+      "key": "userId",
+      "value": ""
+    },
+    {
+      "key": "firstName",
+      "value": ""
+    },
+    {
+      "key": "lastName",
+      "value": ""
+    },
+    {
+      "key": "updatedFirstName",
+      "value": ""
+    },
+    {
+      "key": "petId",
+      "value": ""
+    },
+    {
+      "key": "petName",
+      "value": ""
+    }
+  ]
+}
